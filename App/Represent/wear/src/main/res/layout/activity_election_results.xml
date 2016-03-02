@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center_horizontal"
+    android:paddingTop="10dp"
+    android:background="@drawable/election_results"
+    tools:context="com.github.connietruong.represent.ElectionResultsDisplayActivity"
+    tools:deviceIds="wear">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/vote"
+        android:textSize="15sp"
+        android:text="@string/vote" />
+
+    <TextView
+        android:id="@+id/in"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="15sp"
+        android:text="@string/in"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="22sp"
+        android:textColor="#004292"
+        android:id="@+id/county_name"
+        android:text="Alameda, CA"/>
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/obama"
+            android:textColor="#004292"
+            android:paddingRight="15dp"
+            android:textSize="23sp"
+            android:text="@string/obama"/>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#004292"
+            android:paddingLeft="10dp"
+            android:textSize="23sp"
+            android:text="59.3%"
+            android:id="@+id/obama_percent"/>
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#6F0000"
+            android:id="@+id/romney"
+            android:textSize="23sp"
+            android:paddingRight="10dp"
+            android:text="@string/romney"/>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingLeft="10dp"
+            android:text="38.3%"
+            android:textSize="23sp"
+            android:textColor="#6F0000"
+            android:id="@+id/romney_percent"/>
+    </LinearLayout>
+</LinearLayout>

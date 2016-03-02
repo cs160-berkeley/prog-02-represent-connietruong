@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical" android:layout_width="match_parent"
+    android:layout_below="@+id/location_or_zip"
+    android:layout_above="@+id/page_circles"
+    android:background="@color/white"
+    android:id="@+id/representative_template"
+    android:layout_height="wrap_content">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_horizontal"
+        android:textColor="@color/senator_or_rep"
+        android:id="@+id/senator_or_rep"
+        android:paddingTop="4dp"
+        android:paddingBottom="4dp"
+        android:textSize="22sp"/>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_below="@+id/senator_or_rep"
+        android:id="@+id/line"
+        android:background="#8F8F8F"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_below="@+id/line"
+        android:paddingTop="13dp"
+        android:paddingLeft="12dp"
+        android:paddingRight="7dp"
+        android:paddingBottom="13dp"
+        android:id="@+id/image_and_name">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1">
+            <ImageView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/rep_image"
+                android:background="@drawable/outline_democrat"
+                android:padding="7dp"/>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:paddingTop="46dp"
+            android:paddingLeft="16dp"
+            android:paddingRight="16dp">
+            <me.grantland.widget.AutofitTextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/rep_name"
+                android:textColor="@color/rep_bold"
+                android:maxLines="1"
+                android:textSize="22sp"/>
+
+            <me.grantland.widget.AutofitTextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/rep_party"
+                android:textColor="@color/rep_bold"
+                android:maxLines="1"
+                android:textSize="20sp"
+            />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="16sp"
+                android:text="@string/more_info"
+                android:id="@+id/more_info_button"
+                android:textColor="#2077ED"/>
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/image_and_name"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:paddingLeft="4dp"
+        android:paddingRight="4dp"
+        android:id="@+id/tweet">
+
+        <me.grantland.widget.AutofitTextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/tweet_color"
+            android:gravity="center"
+            android:id="@+id/tweet_text"
+            android:textSize="17sp"
+            android:maxLines="4"/>
+
+        <me.grantland.widget.AutofitTextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/tweet_color"
+            android:textSize="17sp"
+            android:id="@+id/tweet_id"
+            android:maxLines="1"/>
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/tweet"
+        android:id="@+id/web_mail_buttons"
+        android:gravity="center_horizontal"
+        android:paddingTop="20dp"
+        android:orientation="horizontal">
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/button_short"
+            android:textColor="@color/white"
+            android:text="Website"
+            android:textSize="16sp"
+            android:textAllCaps="false"
+            android:id="@+id/website_button" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:padding="40dp"></LinearLayout>
+
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/button_short"
+            android:textColor="@color/white"
+            android:text="Email"
+            android:textSize="16sp"
+            android:textAllCaps="false"
+            android:id="@+id/email_button"/>
+    </LinearLayout>
+
+</RelativeLayout>

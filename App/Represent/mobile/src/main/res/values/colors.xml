@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorPrimary">#2D9CDB</color>
+    <color name="colorPrimaryDark">#196FB5</color>
+    <color name="colorAccent">#FF4081</color>
+    <color name="mainPageBck">#C7E1F1</color>
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
+    <color name="edit_text">#B0B0B0</color>
+    <color name="invalid">#E61239</color>
+    <color name="location_or_zip">#E2F1F9</color>
+    <color name="senator_or_rep">#737373</color>
+    <color name="rep_bold">#6F6F6F</color>
+    <color name="tweet_color">#949494</color>
+    <color name="more_info">#575757</color>
+</resources>

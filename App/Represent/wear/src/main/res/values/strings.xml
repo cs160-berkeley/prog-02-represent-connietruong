@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">Represent!</string>
+
+    <string name="vote">2012 Vote</string>
+    <string name="in">in</string>
+    <string name="obama">Obama</string>
+    <string name="romney">Romney</string>
+</resources>

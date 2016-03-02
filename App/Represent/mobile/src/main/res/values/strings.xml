@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">Represent!</string>
+    <string name="use_zip">Use ZIP code</string>
+    <string name="or">-- or --</string>
+    <string name="use_location">Use my location</string>
+    <string name="enter_zip">Enter ZIP code...</string>
+    <string name="find_reps">Find my Reps!  </string>
+    <string name="more_info"><u>More Info</u></string>
+
+ </resources>
