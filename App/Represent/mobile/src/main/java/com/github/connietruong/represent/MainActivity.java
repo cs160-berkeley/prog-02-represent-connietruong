@@ -1,6 +1,9 @@
 package com.github.connietruong.represent;
 
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.content.Intent;
+import android.location.Location;
 import android.os.Bundle;
 import android.support.v4.app.FragmentTransaction;
 import android.support.v7.app.AppCompatActivity;
@@ -9,7 +12,25 @@ import android.view.View;
 import android.widget.EditText;
 import android.widget.TextView;
 
-public class MainActivity extends AppCompatActivity {
+import com.android.volley.Request;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.location.LocationServices;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+public class MainActivity extends AppCompatActivity implements GoogleApiClient.ConnectionCallbacks,
+        GoogleApiClient.OnConnectionFailedListener {
+
+    final String sunlightApiKey = "100a77ba6f7e460b9ff1ac18a3e24113";
+    private final String sunlightUrl = "http://congress.api.sunlightfoundation.com/legislators/locate";
+
+    private GoogleApiClient mGoogleApiClient;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -19,23 +40,24 @@ public class MainActivity extends AppCompatActivity {
         setSupportActionBar(toolbar);
         getSupportActionBar().setIcon(R.drawable.app_bar_icon);
 
+        if (mGoogleApiClient == null) {
+            mGoogleApiClient = new GoogleApiClient.Builder(this)
+                    .addConnectionCallbacks(this)
+                    .addOnConnectionFailedListener(this)
+                    .addApi(LocationServices.API)
+                    .build();
+        }
+
         if (findViewById(R.id.buttonsFragmentContainer) != null) {
 
-            // However, if we're being restored from a previous state,
-            // then we don't need to do anything and should return or else
-            // we could end up with overlapping fragments.
             if (savedInstanceState != null) {
                 return;
             }
 
-            // Create a new Fragment to be placed in the activity layout
             ButtonsFragment defaultFragment = new ButtonsFragment();
 
-            // In case this activity was started with special instructions from an
-            // Intent, pass the Intent's extras to the fragment as arguments
             defaultFragment.setArguments(getIntent().getExtras());
 
-            // Add the fragment to the 'fragment_container' FrameLayout
             getSupportFragmentManager().beginTransaction().add(R.id.buttonsFragmentContainer, defaultFragment).commit();
         }
     }
@@ -43,7 +65,6 @@ public class MainActivity extends AppCompatActivity {
     public void useZip(View view) {
         ZipCodeFragment zipFragment = new ZipCodeFragment();
         FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
-        // transaction.setCustomAnimations(R.animator.slide_in_left, R.animator.slide_in_right, 0, 0);
         transaction.replace(R.id.buttonsFragmentContainer, zipFragment);
         transaction.addToBackStack(null);
         transaction.commit();
@@ -51,37 +72,137 @@ public class MainActivity extends AppCompatActivity {
 
     public void findRepsZip(View view) {
         EditText enteredZip = (EditText) findViewById(R.id.zip_code);
-        String zipCode = enteredZip.getText().toString();
-        TextView error = (TextView) findViewById(R.id.invalid_zip);
-        //check if Zipcode is valid or not
-        if (zipCode.length() != 5) {
-            error.setText("Please enter 5 digits for ZIP code.");
-        } else {
-            Intent zipCodeServiceIntent = new Intent(getBaseContext(), PhoneToWatchService.class);
-            zipCodeServiceIntent.putExtra("ZIP_CODE", zipCode);
-            startService(zipCodeServiceIntent);
+        final String zipCode = enteredZip.getText().toString();
+        final TextView error = (TextView) findViewById(R.id.invalid_zip);
+        String zipHttpCall = sunlightUrl + "?zip=" + zipCode + "&apikey=" + sunlightApiKey;
+        JsonObjectRequest jsObjRequest = new JsonObjectRequest
+                (Request.Method.GET, zipHttpCall, null, new Response.Listener<JSONObject>() {
 
-            Intent zipCodeIntent = new Intent(getBaseContext(), RepDisplayActivity.class);
-            zipCodeIntent.putExtra("ZIP_CODE", zipCode);
-            zipCodeIntent.setFlags(zipCodeIntent.getFlags());
-            startActivity(zipCodeIntent);
-        }
+                    @Override
+                    public void onResponse(JSONObject response) {
+                        try {
+                            final Integer repCount = Integer.parseInt(response.getString("count"));
+                            if (repCount == 0) {
+                                error.setText("Please enter a valid ZIP code.");
+                            } else {
+                                final JSONArray results = response.getJSONArray("results");
+
+                                final JSONObject serviceInfo = new JSONObject();
+                                serviceInfo.put("RESULTS", results);
+                                serviceInfo.put("ZIP_CODE", zipCode);
+                                serviceInfo.put("REP_COUNT", repCount);
+
+                                Intent zipCodeIntent = new Intent(getBaseContext(), TwitterAuthenticateService.class);
+                                zipCodeIntent.putExtra("COUNTER", 0);
+                                zipCodeIntent.putExtra("ZIP_CODE", zipCode);
+                                zipCodeIntent.putExtra("REP_COUNT", repCount);
+                                zipCodeIntent.putExtra("REP_RESULTS", results.toString());
+                                zipCodeIntent.putExtra("SERVICE_INFO", serviceInfo.toString());
+
+                                zipCodeIntent.addFlags(zipCodeIntent.getFlags());
+                                startService(zipCodeIntent);
+                                error.setText("Loading results...");
+                            }
+                        } catch (JSONException e) {
+
+                        }
+                    }
+                }, new Response.ErrorListener() {
+
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        // TODO Auto-generated method stub
+
+                    }
+                });
+        MySingleton.getInstance(this).addToRequestQueue(jsObjRequest);
+        error.setText("Checking if input is valid ZIP code...");
     }
 
     public void findRepsLocation(View view) {
-        //use GPS to find location
-        // Acquire a reference to the system Location Manager
+        mGoogleApiClient.connect();
+        final TextView error = (TextView) findViewById(R.id.loading);
+        error.setText("Loading Results...");
+    }
 
-        Intent zipCodeServiceIntent = new Intent(getBaseContext(), PhoneToWatchService.class);
-        zipCodeServiceIntent.putExtra("LOCATION", "placeholder");
-        startService(zipCodeServiceIntent);
+    @Override
+    protected void onPause() {
+        super.onPause();
+        mGoogleApiClient.disconnect();
+    }
 
-        Intent locationIntent = new Intent(getBaseContext(), RepDisplayActivity.class);
-        //Gson gson = new Gson();
-        locationIntent.putExtra("LOCATION", "placeholder");
-        locationIntent.setFlags(locationIntent.getFlags());
-        startActivity(locationIntent);
+    @Override
+    public void onConnected(Bundle bundle) {
+        try {
+            Location mLastLocation = LocationServices.FusedLocationApi.getLastLocation(
+                    mGoogleApiClient);
+            if (mLastLocation != null) {
+                final String latitude = String.valueOf(mLastLocation.getLatitude());
+                final String longitude = String.valueOf(mLastLocation.getLongitude());
+                String locationHttpCall = sunlightUrl + "?latitude=" + latitude +
+                        "&longitude=" + longitude + "&apikey=" + sunlightApiKey;
+                JsonObjectRequest jsObjRequest = new JsonObjectRequest
+                        (Request.Method.GET, locationHttpCall, null, new Response.Listener<JSONObject>() {
 
+                            @Override
+                            public void onResponse(JSONObject response) {
+                                try {
+                                    JSONObject serviceInfo = new JSONObject();
+                                    JSONArray results = response.getJSONArray("results");
+                                    Integer repCount = Integer.parseInt(response.getString("count"));
+                                    String latLong = latitude + "," + longitude;
+
+                                    serviceInfo.put("RESULTS", results);
+                                    serviceInfo.put("LOCATION", latLong);
+                                    serviceInfo.put("REP_COUNT", repCount);
+
+                                    Intent locationIntent = new Intent(getBaseContext(), TwitterAuthenticateService.class);
+                                    locationIntent.putExtra("LOCATION", latLong);
+                                    locationIntent.putExtra("REP_COUNT", repCount);
+                                    locationIntent.putExtra("REP_RESULTS", results.toString());
+                                    locationIntent.putExtra("SERVICE_INFO", serviceInfo.toString());
+
+                                    locationIntent.setFlags(locationIntent.getFlags());
+                                    locationIntent.addFlags(locationIntent.getFlags());
+                                    startService(locationIntent);
+                                } catch (JSONException e) {
+
+                                }
+                            }
+                        }, new Response.ErrorListener() {
+
+                            @Override
+                            public void onErrorResponse(VolleyError error) {
+                                // TODO Auto-generated method stub
+
+                            }
+                        });
+                MySingleton.getInstance(this).addToRequestQueue(jsObjRequest);
+            } else {
+                AlertDialog d;
+                AlertDialog.Builder builder = new AlertDialog.Builder(this);
+                builder.setTitle("Error: GPS not available");
+                builder.setMessage("Please turn on GPS to access this function.");
+                builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+
+                    }
+                });
+                d = builder.create();
+                d.show();
+            }
+        } catch (SecurityException e) {
+
+        }
+    }
+
+    @Override
+    public void onConnectionSuspended(int i) {
+    }
+
+    @Override
+    public void onConnectionFailed(ConnectionResult connResult) {
     }
 
 }

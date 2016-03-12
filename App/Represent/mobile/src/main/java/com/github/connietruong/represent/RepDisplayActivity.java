@@ -5,6 +5,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.location.Location;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
@@ -20,7 +21,26 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-public class RepDisplayActivity extends AppCompatActivity {
+import com.android.volley.Request;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.location.LocationServices;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+public class RepDisplayActivity extends AppCompatActivity implements GoogleApiClient.ConnectionCallbacks,
+        GoogleApiClient.OnConnectionFailedListener {
+    Integer REP_COUNT = 3;
+    String TWITTER = "";
+    final String sunlightApiKey = "100a77ba6f7e460b9ff1ac18a3e24113";
+    final String sunlightUrl = "http://congress.api.sunlightfoundation.com/legislators/locate";
+
+    private GoogleApiClient mGoogleApiClient;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -29,22 +49,46 @@ public class RepDisplayActivity extends AppCompatActivity {
         setContentView(R.layout.activity_rep_display);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-        // getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         getSupportActionBar().setLogo(R.drawable.app_bar_icon);
         getSupportActionBar().setElevation(0);
         Typeface droidSans = Typeface.createFromAsset(getAssets(), "fonts/DroidSans.ttf");
 
+        if (mGoogleApiClient == null) {
+            mGoogleApiClient = new GoogleApiClient.Builder(this)
+                    .addConnectionCallbacks(this)
+                    .addOnConnectionFailedListener(this)
+                    .addApi(LocationServices.API)
+                    .build();
+        }
+
         LinearLayout repLayout = (LinearLayout) findViewById(R.id.location_or_zip);
         repLayout.setElevation(0);
         Intent intent = getIntent();
-        if (intent.hasExtra("ZIP_CODE")) {
+        TWITTER = intent.getStringExtra("TWITTER");
+
+        if (intent.hasExtra("SHAKE_COUNTY")) {
+            TextView basedOn = new TextView(this);
+            basedOn.setTypeface(droidSans);
+            basedOn.setText("Based on random location:");
+            basedOn.setTextColor(Color.parseColor("#474747"));
+            repLayout.addView(basedOn);
+
+            TextView county = new TextView(this);
+            county.setTypeface(droidSans, 1);
+            county.setTextColor(Color.parseColor("#292929"));
+            county.setText(intent.getStringExtra("SHAKE_COUNTY"));
+            county.setPadding(55, 0, 0, 0);
+            repLayout.addView(county);
+        } else if (intent.hasExtra("ZIP_CODE")) {
+            REP_COUNT = intent.getIntExtra("REP_COUNT", 3);
+
             TextView basedOn = new TextView(this);
             basedOn.setTypeface(droidSans);
             basedOn.setText("Based on ZIP:");
             basedOn.setTextColor(Color.parseColor("#474747"));
             repLayout.addView(basedOn);
 
-            TextView zipCode = new TextView(this);
+            final TextView zipCode = new TextView(this);
             zipCode.setTypeface(droidSans, 1);
             zipCode.setTextColor(Color.parseColor("#303030"));
             zipCode.setText(intent.getStringExtra("ZIP_CODE"));
@@ -76,7 +120,6 @@ public class RepDisplayActivity extends AppCompatActivity {
                             .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
                                 @Override
                                 public void onClick(DialogInterface dialog, int id) {
-                                    //  Your code when user clicked on Cancel
 
                                 }
                             });
@@ -91,33 +134,59 @@ public class RepDisplayActivity extends AppCompatActivity {
 
                                 @Override
                                 public void onClick(View view) {
-                                    EditText newZip = (EditText) d.findViewById(R.id.new_zip);
-                                    String zip_code = newZip.getText().toString();
-                                    if (zip_code.length() == 5) {
-                                        // add service too
-                                        Intent ser_intent = new Intent(getBaseContext(), PhoneToWatchService.class);
-                                        ser_intent.putExtra("ZIP_CODE", zip_code);
-                                        startService(ser_intent);
+                                    final EditText newZip = (EditText) d.findViewById(R.id.new_zip);
+                                    final String zip_code = newZip.getText().toString();
+                                    final View view2 = view;
+                                    String zipHttpCall = sunlightUrl + "?zip=" + zip_code + "&apikey=" + sunlightApiKey;
+                                    JsonObjectRequest jsObjRequest = new JsonObjectRequest
+                                            (Request.Method.GET, zipHttpCall, null, new Response.Listener<JSONObject>() {
 
-                                        Intent intent = new Intent(getBaseContext(), RepDisplayActivity.class);
-                                        intent.putExtra("ZIP_CODE", zip_code);
-                                        intent.setFlags(intent.getFlags() | Intent.FLAG_ACTIVITY_NO_HISTORY);
-                                        startActivity(intent);
-                                        d.dismiss();
-                                    } else {
-                                        AlertDialog d;
-                                        AlertDialog.Builder builder = new AlertDialog.Builder(view.getContext());
-                                        builder.setTitle("Error: Invalid ZIP Code");
-                                        builder.setMessage("Please enter a valid ZIP code.");
-                                        builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
-                                            @Override
-                                            public void onClick(DialogInterface dialog, int which) {
+                                                @Override
+                                                public void onResponse(JSONObject response) {
+                                                    try {
+                                                        Integer repCount = Integer.parseInt(response.getString("count"));
+                                                        if (repCount == 0) {
+                                                            AlertDialog d;
+                                                            AlertDialog.Builder builder = new AlertDialog.Builder(view2.getContext());
+                                                            builder.setTitle("Error: Invalid ZIP Code");
+                                                            builder.setMessage("Please enter a valid ZIP code.");
+                                                            builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                                                                @Override
+                                                                public void onClick(DialogInterface dialog, int which) {
 
-                                            }
-                                        });
-                                        d = builder.create();
-                                        d.show();
-                                    }
+                                                                }
+                                                            });
+                                                            d = builder.create();
+                                                            d.show();
+                                                        } else {
+                                                            JSONArray repResults = response.getJSONArray("results");
+
+                                                            JSONObject serviceInfo = new JSONObject();
+                                                            serviceInfo.put("RESULTS", repResults);
+                                                            serviceInfo.put("ZIP_CODE", zip_code);
+                                                            serviceInfo.put("REP_COUNT", repCount);
+
+                                                            Intent intent = new Intent(getBaseContext(), TwitterAuthenticateService.class);
+                                                            intent.putExtra("ZIP_CODE", zip_code);
+                                                            intent.putExtra("REP_COUNT", repCount);
+                                                            intent.putExtra("REP_RESULTS", repResults.toString());
+                                                            intent.putExtra("SERVICE_INFO", serviceInfo.toString());
+                                                            startService(intent);
+                                                            d.dismiss();
+                                                        }
+                                                    } catch (JSONException e) {
+
+                                                    }
+                                                }
+                                            }, new Response.ErrorListener() {
+
+                                                @Override
+                                                public void onErrorResponse(VolleyError error) {
+                                                    // TODO Auto-generated method stub
+
+                                                }
+                                            });
+                                    MySingleton.getInstance(getBaseContext()).addToRequestQueue(jsObjRequest);
                                 }
                             });
                         }
@@ -126,7 +195,9 @@ public class RepDisplayActivity extends AppCompatActivity {
                 }
             });
             repLayout.addView(changeButton);
-        } else {
+        }  else {
+            REP_COUNT = intent.getIntExtra("REP_COUNT", 3);
+
             TextView basedOn = new TextView(this);
             basedOn.setTypeface(droidSans);
             basedOn.setText("Based on your location:");
@@ -141,15 +212,8 @@ public class RepDisplayActivity extends AppCompatActivity {
             refreshButton.setClickable(true);
             refreshButton.setOnClickListener(new View.OnClickListener() {
                 @Override
-                public void onClick(View v) {
-                    //access gps and set to new location
-                    Intent serIntent = new Intent(getBaseContext(), PhoneToWatchService.class);
-                    serIntent.putExtra("LOCATION", "placeholder");
-                    startService(serIntent);
-
-                    Intent intent = new Intent(getBaseContext(), RepDisplayActivity.class);
-                    intent.putExtra("LOCATION", "placeholder");
-                    startActivity(intent);
+                public void onClick(View view) {
+                    mGoogleApiClient.connect();
                 }
             });
             repLayout.addView(refreshButton);
@@ -161,6 +225,8 @@ public class RepDisplayActivity extends AppCompatActivity {
             int col_number = Integer.parseInt(intent.getStringExtra("COL_NUMBER"));
             mPagerAdapter.setColNumber(col_number);
         }
+        mPagerAdapter.setRepResults(intent.getStringExtra("REP_RESULTS"));
+
         mPager.setAdapter(mPagerAdapter);
         mPager.addOnPageChangeListener(new ViewPager.OnPageChangeListener() {
             @Override
@@ -223,6 +289,7 @@ public class RepDisplayActivity extends AppCompatActivity {
     @Override
     public void onBackPressed() {
         Intent backIntent = new Intent(this, MainActivity.class);
+        backIntent.addFlags(backIntent.getFlags() | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         startActivity(backIntent);
     }
 
@@ -230,21 +297,92 @@ public class RepDisplayActivity extends AppCompatActivity {
         public ScreenSlidePagerAdapter(FragmentManager fm) {
             super(fm);
         }
+
         Integer col_number = -1;
+        String repResults = null;
 
         @Override
         public Fragment getItem(int position) {
-            return RepresentativesFragment.newInstance(position, col_number);
+            return RepresentativesFragment.newInstance(position, col_number, repResults, TWITTER);
         }
 
         public void setColNumber(int v) {
             col_number = v;
         }
 
+        public void setRepResults(String r) {
+            repResults = r;
+        }
+
         @Override
         public int getCount() {
-            return 3;
+            return REP_COUNT;
         }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        mGoogleApiClient.disconnect();
+    }
+
+    @Override
+    public void onConnected(Bundle bundle) {
+        try {
+            Location mLastLocation = LocationServices.FusedLocationApi.getLastLocation(
+                    mGoogleApiClient);
+            if (mLastLocation != null) {
+                final String latitude = String.valueOf(mLastLocation.getLatitude());
+                final String longitude = String.valueOf(mLastLocation.getLongitude());
+                String locationHttpCall = sunlightUrl + "?latitude=" + latitude +
+                        "&longitude=" + longitude + "&apikey=" + sunlightApiKey;
+                JsonObjectRequest jsObjRequest = new JsonObjectRequest
+                        (Request.Method.GET, locationHttpCall, null, new Response.Listener<JSONObject>() {
+
+                            @Override
+                            public void onResponse(JSONObject response) {
+                                try {
+                                    JSONObject serviceInfo = new JSONObject();
+                                    JSONArray results = response.getJSONArray("results");
+                                    Integer repCount = Integer.parseInt(response.getString("count"));
+                                    String latLong = latitude + "," + longitude;
+
+                                    serviceInfo.put("RESULTS", results);
+                                    serviceInfo.put("LOCATION", latLong);
+                                    serviceInfo.put("REP_COUNT", repCount);
+
+                                    Intent locationIntent = new Intent(getBaseContext(), TwitterAuthenticateService.class);
+                                    locationIntent.putExtra("LOCATION", latLong);
+                                    locationIntent.putExtra("REP_COUNT", repCount);
+                                    locationIntent.putExtra("REP_RESULTS", results.toString());
+                                    locationIntent.putExtra("SERVICE_INFO", serviceInfo.toString());
+
+                                    startService(locationIntent);
+                                } catch (JSONException e) {
+
+                                }
+                            }
+                        }, new Response.ErrorListener() {
+
+                            @Override
+                            public void onErrorResponse(VolleyError error) {
+                                // TODO Auto-generated method stub
+
+                            }
+                        });
+                MySingleton.getInstance(this).addToRequestQueue(jsObjRequest);
+            }
+        } catch (SecurityException e) {
+
+        }
+    }
+
+    @Override
+    public void onConnectionSuspended(int i) {
+    }
+
+    @Override
+    public void onConnectionFailed(ConnectionResult connResult) {
     }
 
 }

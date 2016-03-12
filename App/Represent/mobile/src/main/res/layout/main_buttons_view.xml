@@ -37,4 +37,10 @@
         android:textColor="@color/white"
         android:onClick="findRepsLocation"
         android:id="@+id/use_location"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@color/invalid"
+        android:id="@+id/loading"/>
 </LinearLayout>

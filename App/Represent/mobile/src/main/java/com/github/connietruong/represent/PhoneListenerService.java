@@ -8,6 +8,10 @@ import com.google.android.gms.wearable.WearableListenerService;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 
@@ -16,48 +20,71 @@ import java.util.ArrayList;
  */
 public class PhoneListenerService extends WearableListenerService {
 
-//   WearableListenerServices don't need an iBinder or an onStartCommand: they just need an onMessageReceieved.
     private static final String COLUMN_NUMBER = "/COL_NUMBER";
-    private static final String ZIP_CODE = "/ZIP_CODE";
+    private static final String SHAKE = "/SHAKE";
 
     @Override
     public void onMessageReceived(MessageEvent messageEvent) {
         Log.d("T", "in PhoneListenerService, got: " + messageEvent.getPath());
         if( messageEvent.getPath().equalsIgnoreCase(COLUMN_NUMBER) ) {
 
-            // Value contains the String we sent over in WatchToPhoneService, "good job"
             String value = new String(messageEvent.getData(), StandardCharsets.UTF_8);
 
             Gson gson = new Gson();
             ArrayList<String> strings = gson.fromJson(value, new TypeToken<ArrayList<String>>() {
             }.getType());
 
-            Intent intent = new Intent(getApplicationContext(), RepDisplayActivity.class);
+            final Intent intent = new Intent(getApplicationContext(), RepDisplayActivity.class);
             intent.putExtra("COL_NUMBER", strings.get(0));
             if (strings.get(1).isEmpty()) {
-                intent.putExtra("LOCATION", strings.get(2));
+                final String location = strings.get(2);
+                try {
+                    JSONObject serviceExtras = new JSONObject(location);
+                    JSONArray results = serviceExtras.getJSONArray("RESULTS");
+                    String latLong = serviceExtras.getString("LOCATION");
+                    String rep_count = serviceExtras.getString("REP_COUNT");
+                    String twitter = serviceExtras.getString("TWITTER");
+                    intent.putExtra("TWITTER", twitter);
+                    intent.putExtra("REP_COUNT", rep_count);
+                    intent.putExtra("LOCATION", latLong);
+                    intent.putExtra("REP_RESULTS", results.toString());
+
+                    if (!serviceExtras.isNull("SHAKE_COUNTY")) {
+                        intent.putExtra("SHAKE_COUNTY", serviceExtras.getString("SHAKE_COUNTY"));
+                    }
+
+                    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    startActivity(intent);
+                } catch (JSONException e) {
+
+                }
             } else {
-                intent.putExtra("ZIP_CODE", strings.get(1));
+                final String zipCode = strings.get(1);
+                try {
+                    JSONObject serviceExtras = new JSONObject(zipCode);
+                    JSONArray results = serviceExtras.getJSONArray("RESULTS");
+                    String zip_code = serviceExtras.getString("ZIP_CODE");
+                    Integer rep_count = serviceExtras.getInt("REP_COUNT");
+                    String twitter = serviceExtras.getString("TWITTER");
+                    intent.putExtra("TWITTER", twitter);
+                    intent.putExtra("REP_COUNT", rep_count);
+                    intent.putExtra("ZIP_CODE", zip_code);
+                    intent.putExtra("REP_RESULTS", results.toString());
+
+                    if (!serviceExtras.isNull("SHAKE_COUNTY")) {
+                        intent.putExtra("SHAKE_COUNTY", serviceExtras.getString("SHAKE_COUNTY"));
+                    }
+
+                    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    startActivity(intent);
+                } catch (JSONException e) {
+
+                }
             }
-            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            startActivity(intent);
 
-
-            // so you may notice this crashes the phone because it's
-            //''sending message to a Handler on a dead thread''... that's okay. but don't do this.
-            // replace sending a toast with, like, starting a new activity or something.
-            // who said skeleton code is untouchable? #breakCSconceptions
-
-        } else if (messageEvent.getPath().equalsIgnoreCase(ZIP_CODE)) {
-            String value = new String(messageEvent.getData(), StandardCharsets.UTF_8);
-            Intent wearIntent = new Intent(getApplicationContext(), PhoneToWatchService.class);
-            wearIntent.putExtra("ZIP_CODE", value);
-            startService(wearIntent);
-
-            Intent intent = new Intent(getApplicationContext(), RepDisplayActivity.class);
-            intent.putExtra("ZIP_CODE", value);
-            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            startActivity(intent);
+        } else if (messageEvent.getPath().equalsIgnoreCase(SHAKE)) {
+            Intent intent = new Intent(getBaseContext(), RandomizerService.class);
+            startService(intent);
         }
         else {
             super.onMessageReceived( messageEvent );

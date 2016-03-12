@@ -14,26 +14,19 @@ import com.google.android.gms.wearable.Wearable;
 import com.google.gson.Gson;
 
 import java.util.ArrayList;
-import java.util.List;
 
-/**
- * Created by joleary and noon on 2/19/16 at very late in the night. (early in the morning?)
- */
+
 public class WatchToPhoneService extends Service implements GoogleApiClient.ConnectionCallbacks {
 
     private GoogleApiClient mWatchApiClient;
-    private List<Node> nodes = new ArrayList<>();
 
     @Override
     public void onCreate() {
         super.onCreate();
-        //initialize the googleAPIClient for message passing
         mWatchApiClient = new GoogleApiClient.Builder( this )
                 .addApi( Wearable.API )
                 .addConnectionCallbacks(this)
                 .build();
-        //and actually connect it
-        //mWatchApiClient.connect();
     }
 
     @Override
@@ -48,7 +41,7 @@ public class WatchToPhoneService extends Service implements GoogleApiClient.Conn
         return null;
     }
 
-    @Override //alternate method to connecting: no longer create this in a new thread, but as a callback
+    @Override
     public void onConnected(Bundle bundle) {
         Log.d("T", "in onconnected");
 
@@ -71,21 +64,23 @@ public class WatchToPhoneService extends Service implements GoogleApiClient.Conn
                     keys.add("");
                     keys.add(extras.getString("LOCATION"));
                 }
+                if (extras.containsKey("SHAKE_COUNTY")) {
+                    keys.add(extras.getString("SHAKE_COUNTY"));
+                } else {
+                    keys.add("");
+                }
 
                 Gson gson = new Gson();
                 input = gson.toJson(keys);
             } else {
-                path = "ZIP_CODE";
-                input = extras.getString("ZIP_CODE");
+                path = "SHAKE";
+                input = extras.getString("SHAKE");
             }
 
-            // Send the message with the cat name
             new Thread(new Runnable() {
                 @Override
                 public void run() {
-                    //first, connect to the apiclient
                     mWatchApiClient.connect();
-                    //now that you're connected, send a massage with the cat name
                     sendMessage("/" + path, input);
                 }
             }).start();
@@ -93,7 +88,7 @@ public class WatchToPhoneService extends Service implements GoogleApiClient.Conn
         return START_STICKY;
     }
 
-    @Override //we need this to implement GoogleApiClient.ConnectionsCallback
+    @Override
     public void onConnectionSuspended(int i) {}
 
     private void sendMessage(final String path, final String text ) {
@@ -103,12 +98,8 @@ public class WatchToPhoneService extends Service implements GoogleApiClient.Conn
                 NodeApi.GetConnectedNodesResult nodes = Wearable.NodeApi.getConnectedNodes( mWatchApiClient ).await();
                 for(Node node : nodes.getNodes()) {
                     Log.d("T", "running sendMessage");
-                    //we find 'nodes', which are nearby bluetooth devices (aka emulators)
-                    //send a message for each of these nodes (just one, for an emulator)
                     MessageApi.SendMessageResult result = Wearable.MessageApi.sendMessage(
                             mWatchApiClient, node.getId(), path, text.getBytes() ).await();
-                    //4 arguments: api client, the node ID, the path (for the listener to parse),
-                    //and the message itself (you need to convert it to bytes.)
                 }
             }
         });
